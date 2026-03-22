@@ -1,0 +1,46 @@
+name: Build Admin APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # 🔥 Yahan hum build ke time pe ek dummy .env bana rahe hain taaki error na aaye
+      - name: Create .env file
+        run: echo "DUMMY_KEY=123" > .env
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # Warnings skip karne ke liye flag
+      - name: Build Release APK
+        run: flutter build apk --release --android-skip-build-dependency-validation
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
