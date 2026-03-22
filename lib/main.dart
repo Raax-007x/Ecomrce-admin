@@ -19,56 +19,74 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  await dotenv.load(fileName: ".env");
-  runApp(const MyApp());
+
+  try {
+    // 1. Firebase Initialize (Safely)
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+
+    // 2. Load .env file (Try-catch ke sath taaki app crash na ho)
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("⚠️ .env file nahi mili. App chal raha hai.");
+    }
+
+    // Agar sab theek raha, toh app chalega
+    runApp(const MyApp());
+    
+  } catch (e) {
+    // 🔥 Black screen ki jagah red error text dikhega
+    debugPrint("App Initialization Error: $e");
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "Admin App Start Error:\n\n$e",
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => AdminProvider(),
       builder: (context, child) => MaterialApp(
         title: 'Ecommerce Admin App',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // TRY THIS: Try running your application with "flutter run". You'll see
-          // the application has a purple toolbar. Then, without quitting the app,
-          // try changing the seedColor in the colorScheme below to Colors.green
-          // and then invoke "hot reload" (save your changes or press the "hot
-          // reload" button in a Flutter-supported IDE, or press "r" if you used
-          // the command line to start the app).
-          //
-          // Notice that the counter didn't reset back to zero; the application
-          // state is not lost during the reload. To reset the state, use hot
-          // restart instead.
-          //
-          // This works for code too, not just values: Most code changes can be
-          // tested with just a hot reload.
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
         routes: {
-          "/": (context) => CheckUser(),
-          "/login": (context) => LoginPage(),
-          "/signup": (context) => SingupPage(),
-          "/home": (context) => AdminHome(),
-          "/category": (context) => CategoriesPage(),
-          "/products": (context) => ProductsPage(),
-          "/add_product": (context) => ModifyProduct(),
-          "/view_product": (context) => ViewProduct(),
-          "/promos": (context) => PromoBannersPage(),
-          "/update_promo": (context) => ModifyPromo(),
-          "/coupons": (context) => CouponsPage(),
-          "/orders": (context) => OrdersPage(),
-          "/view_order": (context) => ViewOrder()
+          "/": (context) => const CheckUser(),
+          "/login": (context) => const LoginPage(),
+          "/signup": (context) => const SingupPage(),
+          "/home": (context) => const AdminHome(),
+          "/category": (context) => const CategoriesPage(),
+          "/products": (context) => const ProductsPage(),
+          "/add_product": (context) => const ModifyProduct(),
+          "/view_product": (context) => const ViewProduct(),
+          "/promos": (context) => const PromoBannersPage(),
+          "/update_promo": (context) => const ModifyPromo(),
+          "/coupons": (context) => const CouponsPage(),
+          "/orders": (context) => const OrdersPage(),
+          "/view_order": (context) => const ViewOrder()
         },
       ),
     );
@@ -85,19 +103,25 @@ class CheckUser extends StatefulWidget {
 class _CheckUserState extends State<CheckUser> {
   @override
   void initState() {
-    AuthService().isLoggedIn().then((value) {
-      if (value) {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() async {
+    bool isLoggedIn = await AuthService().isLoggedIn();
+    // mounted check zaroori hai error se bachne ke liye
+    if (mounted) {
+      if (isLoggedIn) {
         Navigator.pushReplacementNamed(context, "/home");
       } else {
         Navigator.pushReplacementNamed(context, "/login");
       }
-    });
-    super.initState();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: Center(
         child: CircularProgressIndicator(),
       ),
